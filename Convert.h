@@ -7,25 +7,33 @@
 #include <assert.h>
 #include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <string>
+#include <sys/time.h>
 
 using namespace std;
 
 typedef unsigned char BYTE;
 typedef short SHWORD;
 
+#define D_WIDTH (1920)
+#define D_HEIGHT (1080)
+
 #define MODE_NORM 0
 #define MODE_MMX 1
 #define MODE_SSE2 2
 #define MODE_AVX 3
 
-// typedef struct SRGB_C
-// {
-//     BYTE r;
-//     BYTE g;
-//     BYTE b;
-// } RGB_C;
+const char TestName[3][50] = {"", "Alpha gradient test", "Alpha amalgamation test"};
+const char ModeName[4][50] = {"no", "MMX", "SSE2", "AVX"};
+
+typedef struct SRGB_C
+{
+    BYTE r;
+    BYTE g;
+    BYTE b;
+} RGB_C;
 
 class YUV420
 {

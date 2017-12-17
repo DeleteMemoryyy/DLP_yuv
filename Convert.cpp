@@ -405,7 +405,7 @@ void YUV2RGB(YUV420 *yuv, RGB *rgb)
                         {
                             tmp_store = _mm256_loadu_si256(src_y);
                             tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_16);  // (Y - 16)
-                            tmp = _mm256_mulhi_epi16(tmp_data, Y_R);  // R = (Y - 16) * 0.164383
+                            tmp = _mm256_mulhi_epi16(tmp_data, Y_R);     // R = (Y - 16) * 0.164383
                             tmp_dst = _mm256_adds_epi16(tmp, tmp_data);  // R += Y - 16
 
                             tmp_store = _mm256_loadu_si256(src_u);
@@ -1055,23 +1055,41 @@ void show_all_alpha(YUV420 *yuv_src)
     YUV420 *yuv_h = new YUV420(height, width);
     BYTE *block = new BYTE[size_yuv];
 
+    FILE *fyuv_h = NULL;
+    switch (mode)
+        {
+            case MODE_NORM:
+                fyuv_h = fopen("result/alpha.yuv", "wb+");
+                break;
+            case MODE_MMX:
+                fyuv_h = fopen("result/alpha_mmx.yuv", "wb+");
+                break;
+            case MODE_SSE2:
+                fyuv_h = fopen("result/alpha_sse2.yuv", "wb+");
+                break;
+            case MODE_AVX:
+                fyuv_h = fopen("result/alpha_avx.yuv", "wb+");
+                break;
+            default:
+                break;
+        }
+
+    if (fyuv_h == NULL)
+        {
+            printf("Open file faild.\n");
+            return;
+        }
+
     for (int i = 1; i < 256; i += 3)
         {
             ALPHA_AMALGAMATE(rgb, rgb_h, i);
             RGB2YUV(rgb_h, yuv_h);
 
             yuv_h->save_block(block);
-            char namebuf[32];
-            sprintf(namebuf, "result/alpha/%d.yuv", i);
-            FILE *fyuv_h = fopen(namebuf, "wb+");
-            if (fyuv_h == NULL)
-                {
-                    printf("Open file faild.\n");
-                    return;
-                }
+
             fwrite(block, 1, size_yuv, fyuv_h);
-            fclose(fyuv_h);
         }
+    fclose(fyuv_h);
     delete[] block;
     delete yuv_h;
     delete rgb;
@@ -1091,6 +1109,32 @@ void mix(YUV420 *yuv_src1, YUV420 *yuv_src2)
     YUV2RGB(yuv_src2, rgb_s2);
     YUV420 *yuv_dst = new YUV420(yuv_src1->h, yuv_src1->w);
     BYTE *block = new BYTE[size_yuv];
+
+    FILE *fyuv_dst = NULL;
+    switch (mode)
+        {
+            case MODE_NORM:
+                fyuv_dst = fopen("result/mixed.yuv", "wb+");
+                break;
+            case MODE_MMX:
+                fyuv_dst = fopen("result/mixed_mmx.yuv", "wb+");
+                break;
+            case MODE_SSE2:
+                fyuv_dst = fopen("result/mixed_sse2.yuv", "wb+");
+                break;
+            case MODE_AVX:
+                fyuv_dst = fopen("result/mixed_avx.yuv", "wb+");
+                break;
+            default:
+                break;
+        }
+
+    if (fyuv_dst == NULL)
+        {
+            printf("Open file faild.\n");
+            return;
+        }
+
     for (int i = 1; i < 256; i += 3)
         {
             ALPHA_AMALGAMATE(rgb_s1, rgb_d1, (255 - i));
@@ -1099,49 +1143,121 @@ void mix(YUV420 *yuv_src1, YUV420 *yuv_src2)
 
             RGB2YUV(rgb_dst, yuv_dst);
             yuv_dst->save_block(block);
-            char namebuf[32];
-            sprintf(namebuf, "result/mix/%d.yuv", i);
-            FILE *fyuv_dst = fopen(namebuf, "wb+");
-            if (fyuv_dst == NULL)
-                {
-                    printf("Open file faild.\n");
-                    return;
-                }
+
             fwrite(block, 1, size_yuv, fyuv_dst);
-            fclose(fyuv_dst);
         }
+    fclose(fyuv_dst);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    mode = MODE_AVX;
-    // int size = 1920 * 1080;
-    int fsize = 1920 * 1080 * 3 / 2;
-    BYTE *block_1 = new BYTE[fsize], *block_2 = new BYTE[fsize], *block_h = new BYTE[fsize];
-    FILE *f_1 = fopen("demo/dem1.yuv", "rb");
-    if (f_1 == NULL)
-        {
-            printf("Open file faild.\n");
-            return 1;
-        }
-    fread(block_1, 1, fsize, f_1);
-    fclose(f_1);
-    FILE *f_2 = fopen("demo/dem2.yuv", "rb");
-    if (f_2 == NULL)
-        {
-            printf("Open file faild.\n");
-            return 1;
-        }
-    fread(block_2, 1, fsize, f_2);
-    fclose(f_2);
-    YUV420 *yuv_1 = new YUV420(1080, 1920), *yuv_2 = new YUV420(1080, 1920),
-           *yuv_h = new YUV420(1080, 1920);
-    yuv_1->load_from_block(block_1);
-    yuv_2->load_from_block(block_2);
+    int width = D_WIDTH, height = D_HEIGHT;
+    int test_case = 0;
+    char namebuf1[50], namebuf2[50];
+    sprintf(namebuf1, "%s", "demo/dem1.yuv");
+    sprintf(namebuf2, "%s", "demo/dem2.yuv");
 
+    int argCount;
+    for (argc--, argv++; argc > 0; argc -= argCount, argv += argCount)
+        {
+            argCount = 1;
+            if (!strcmp(*argv, "-t1"))
+                {
+                    assert(argc >= 2);
+                    sprintf(namebuf1, "%s", *(argv + 1));
+                    test_case = 1;
 
-    show_all_alpha(yuv_1);
-    mix(yuv_1, yuv_2);
+                    argCount = 2;
+                }
+            if (!strcmp(*argv, "-t2"))
+                {
+                    assert(argc >= 3);
+                    sprintf(namebuf1, "%s", *(argv + 1));
+                    sprintf(namebuf2, "%s", *(argv + 2));
+                    test_case = 2;
+
+                    argCount = 3;
+                }
+            if (!strcmp(*argv, "-w"))
+                {
+                    assert(argc >= 2);
+                    width = atoi(*(argv + 1));
+                    argCount = 2;
+                }
+            if (!strcmp(*argv, "-h"))
+                {
+                    assert(argc >= 2);
+                    height = atoi(*(argv + 1));
+                    argCount = 2;
+                }
+            if (!strcmp(*argv, "-o"))
+                {
+                    assert(argc >= 2);
+                    if ((!strcmp(*(argv + 1), "mmx")) || (!strcmp(*(argv + 1), "MMX")))
+                        mode = MODE_MMX;
+                    else if ((!strcmp(*(argv + 1), "sse2")) || (!strcmp(*(argv + 1), "SSE2")))
+                        mode = MODE_SSE2;
+                    else if ((!strcmp(*(argv + 1), "avx")) || (!strcmp(*(argv + 1), "AVX")))
+                        mode = MODE_AVX;
+                    else
+                        {
+                            mode = MODE_NORM;
+                            printf("Invalid optimazition mode, no extra instruction set will be "
+                                   "used.\n");
+                        }
+                    argCount = 2;
+                }
+        }
+
+    int fsize = width * height * 3 / 2;
+    BYTE *block_1 = new BYTE[fsize], *block_2 = new BYTE[fsize];
+    YUV420 *yuv_1 = new YUV420(height, width), *yuv_2 = new YUV420(height, width);
+
+    if (test_case == 1 || test_case == 2)
+        {
+            FILE *f_1 = fopen(namebuf1, "rb");
+            if (f_1 == NULL)
+                {
+                    printf("Open file faild.\n");
+                    return 1;
+                }
+            fread(block_1, 1, fsize, f_1);
+            fclose(f_1);
+            yuv_1->load_from_block(block_1);
+        }
+    if (test_case == 2)
+        {
+            FILE *f_2 = fopen(namebuf2, "rb");
+            if (f_2 == NULL)
+                {
+                    printf("Open file faild.\n");
+                    return 1;
+                }
+            fread(block_2, 1, fsize, f_2);
+            fclose(f_2);
+            yuv_2->load_from_block(block_2);
+        }
+
+    timespec t1, t2;
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    if (test_case == 1)
+        show_all_alpha(yuv_1);
+    else if (test_case == 2)
+        mix(yuv_1, yuv_2);
+    else
+        printf("Invalid test case\n");
+    clock_gettime(CLOCK_MONOTONIC, &t2);
+
+    float deltaT =
+        ((t2.tv_sec - t1.tv_sec) * 1000000 + (t2.tv_nsec - t1.tv_nsec) / 1000.0) / 1000000.0;
+
+    if (test_case == 1 || test_case == 2)
+        {
+            printf("%s with %s extra instruction set finished.\n", TestName[test_case],
+                   ModeName[mode]);
+            printf("Total time: %.3fs\n", deltaT);
+        }
+
 
     return 0;
 }
