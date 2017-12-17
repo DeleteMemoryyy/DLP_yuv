@@ -117,16 +117,10 @@ void YUV2RGB(YUV420 *yuv, RGB *rgb)
     int height = yuv->h;
     int width = yuv->w;
 
-    SHWORD YUV_R[3] = {SHWORD(0.164383 * (1 << 16)), SHWORD(0.017232 * (1 << 16)), 0 * (1 <<
-    16)}; SHWORD YUV_G[3] = {SHWORD(0.164383 * (1 << 16)), SHWORD(-0.391762 * (1 << 16)),
+    SHWORD YUV_R[3] = {SHWORD(0.164383 * (1 << 16)), SHWORD(0.017232 * (1 << 16)), 0 * (1 << 16)};
+    SHWORD YUV_G[3] = {SHWORD(0.164383 * (1 << 16)), SHWORD(-0.391762 * (1 << 16)),
                        SHWORD(-0.312968 * (1 << 16))};
-    SHWORD YUV_B[3] = {SHWORD(0.164383 * (1 << 16)), 0 * (1 << 16), SHWORD(0.096027 * (1 <<
-    16))};
-
-    // SHWORD YUV_R[3] = {SHWORD(0 * (1 << 16)), SHWORD(0 * (1 << 16)), (0.407) * (1 << 16)};
-    // SHWORD YUV_G[3] = {SHWORD(0 * (1 << 16)), SHWORD(-0.344 * (1 << 16)),
-    //                    SHWORD(-0.714 * (1 << 16))};
-    // SHWORD YUV_B[3] = {SHWORD(0 * (1 << 16)), (0.772) * (1 << 16), SHWORD(0 * (1 << 16))};
+    SHWORD YUV_B[3] = {SHWORD(0.164383 * (1 << 16)), 0 * (1 << 16), SHWORD(0.096027 * (1 << 16))};
 
     SHWORD *tmp_u = new SHWORD[height * width];
     SHWORD *tmp_v = new SHWORD[height * width];
@@ -355,138 +349,144 @@ void YUV2RGB(YUV420 *yuv, RGB *rgb)
                 }
                 break;
             case MODE_AVX:
-                // {
-                //     __m256i tmp, tmp_data;
+                {
+                    __m256i tmp, tmp_data, tmp_store, tmp_dst;
 
-                //     const __m256i OFFSET_128 =
-                //         _mm256_set_epi16(128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-                //         128,
-                //                          128, 128, 128, 128);
-                //     const __m256i OFFSET_16 = _mm256_set_epi16(16, 16, 16, 16, 16, 16, 16, 16,
-                //     16,
-                //                                                16, 16, 16, 16, 16, 16, 16);
-                //     const __m256i Y_R =
-                //         _mm256_set_epi16(YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0],
-                //         YUV_R[0],
-                //                          YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0],
-                //                          YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0]);
-                //     const __m256i U_R =
-                //         _mm256_set_epi16(YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1],
-                //         YUV_R[1],
-                //                          YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1],
-                //                          YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1]);
-                //     // const __m256i V_R =
-                //     //     _mm256_set_epi16(YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2],
-                //     //     YUV_R[2],
-                //     //                      YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2],
-                //     //                      YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2]);
-                //     const __m256i Y_G =
-                //         _mm256_set_epi16(YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0],
-                //         YUV_G[0],
-                //                          YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0],
-                //                          YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0]);
-                //     const __m256i U_G =
-                //         _mm256_set_epi16(YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1],
-                //         YUV_G[1],
-                //                          YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1],
-                //                          YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1]);
-                //     const __m256i V_G =
-                //         _mm256_set_epi16(YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2],
-                //         YUV_G[2],
-                //                          YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2],
-                //                          YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2]);
-                //     const __m256i Y_B =
-                //         _mm256_set_epi16(YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0],
-                //         YUV_B[0],
-                //                          YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0],
-                //                          YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0]);
-                //     // const __m256i U_B =
-                //     //     _mm256_set_epi16(YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1],
-                //     //     YUV_B[1],
-                //     //                      YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1],
-                //     //                      YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1]);
-                //     const __m256i V_B =
-                //         _mm256_set_epi16(YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2],
-                //         YUV_B[2],
-                //                          YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2],
-                //                          YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2]);
-                //     _mm_empty();
+                    const __m256i OFFSET_128 =
+                        _mm256_set_epi16(128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+                                         128, 128, 128, 128);
+                    const __m256i OFFSET_16 = _mm256_set_epi16(16, 16, 16, 16, 16, 16, 16, 16, 16,
+                                                               16, 16, 16, 16, 16, 16, 16);
+                    const __m256i Y_R =
+                        _mm256_set_epi16(YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0],
+                                         YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0],
+                                         YUV_R[0], YUV_R[0], YUV_R[0], YUV_R[0]);
+                    const __m256i U_R =
+                        _mm256_set_epi16(YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1],
+                                         YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1],
+                                         YUV_R[1], YUV_R[1], YUV_R[1], YUV_R[1]);
+                    // const __m256i V_R =
+                    //     _mm256_set_epi16(YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2],
+                    //     YUV_R[2],
+                    //                      YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2],
+                    //                      YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2], YUV_R[2]);
+                    const __m256i Y_G =
+                        _mm256_set_epi16(YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0],
+                                         YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0],
+                                         YUV_G[0], YUV_G[0], YUV_G[0], YUV_G[0]);
+                    const __m256i U_G =
+                        _mm256_set_epi16(YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1],
+                                         YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1],
+                                         YUV_G[1], YUV_G[1], YUV_G[1], YUV_G[1]);
+                    const __m256i V_G =
+                        _mm256_set_epi16(YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2],
+                                         YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2],
+                                         YUV_G[2], YUV_G[2], YUV_G[2], YUV_G[2]);
+                    const __m256i Y_B =
+                        _mm256_set_epi16(YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0],
+                                         YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0],
+                                         YUV_B[0], YUV_B[0], YUV_B[0], YUV_B[0]);
+                    // const __m256i U_B =
+                    //     _mm256_set_epi16(YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1],
+                    //     YUV_B[1],
+                    //                      YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1],
+                    //                      YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1], YUV_B[1]);
+                    const __m256i V_B =
+                        _mm256_set_epi16(YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2],
+                                         YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2],
+                                         YUV_B[2], YUV_B[2], YUV_B[2], YUV_B[2]);
+                    _mm_empty();
 
-                //     __m256i *dst = (__m256i *)rgb->RH;
-                //     __m256i *src_y = (__m256i *)yuv->YH;
-                //     __m256i *src_u = (__m256i *)tmp_u;
-                //     __m256i *src_v = (__m256i *)tmp_v;
-                //     for (int i = 0; i < (height * width) / 16; ++i)
-                //         {
-                //             tmp_data = _mm256_subs_epi16(*src_y, OFFSET_16);  // (Y - 16)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, Y_R);  // R = (Y - 16) * 0.164383
-                //             *dst = _mm256_adds_epi16(tmp, tmp_data);  // R += Y - 16
+                    __m256i *dst = (__m256i *)rgb->RH;
+                    __m256i *src_y = (__m256i *)yuv->YH;
+                    __m256i *src_u = (__m256i *)tmp_u;
+                    __m256i *src_v = (__m256i *)tmp_v;
+                    for (int i = 0; i < (height * width) / 16; ++i)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_y);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_16);  // (Y - 16)
+                            tmp = _mm256_mulhi_epi16(tmp_data, Y_R);  // R = (Y - 16) * 0.164383
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_data);  // R += Y - 16
 
-                //             tmp_data = _mm256_subs_epi16(*src_u, OFFSET_128);  // (U - 128)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, U_R);  // (U - 128) * 0.017232
-                //             *dst = _mm256_adds_epi16(*dst, tmp);      // R += (U - 128) *
-                //             0.017232 tmp = _mm256_slli_epi16(tmp_data, 1); *dst =
-                //             _mm256_adds_epi16(*dst, tmp);  // R += (U - 128) << 1;
+                            tmp_store = _mm256_loadu_si256(src_u);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_128);  // (U - 128)
+                            tmp = _mm256_mulhi_epi16(tmp_data, U_R);    // (U - 128) * 0.017232
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, tmp);  // R += (U - 128) * 0.017232
 
-                //             dst++;
-                //             src_y++;
-                //             src_u++;
-                //             src_v++;
-                //         }
+                            tmp = _mm256_slli_epi16(tmp_data, 1);
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, tmp);  // R += (U - 128) << 1;
+                            _mm256_storeu_si256(dst, tmp_dst);
 
-                //     dst = (__m256i *)rgb->GH;
-                //     src_y = (__m256i *)yuv->YH;
-                //     src_u = (__m256i *)tmp_u;
-                //     src_v = (__m256i *)tmp_v;
-                //     for (int i = 0; i < (height * width) / 16; ++i)
-                //         {
-                //             tmp_data = _mm256_subs_epi16(*src_y, OFFSET_16);  // (Y - 16)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, Y_G);  // G = (Y - 16) * 0.164383
-                //             *dst = _mm256_adds_epi16(tmp, tmp_data);  // G += Y - 16
+                            dst++;
+                            src_y++;
+                            src_u++;
+                            src_v++;
+                        }
 
-                //             tmp_data = _mm256_subs_epi16(*src_u, OFFSET_128);  // (U - 128)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, U_G);  // (U - 128) * (-0.391762)
-                //             *dst = _mm256_adds_epi16(*dst, tmp);  // G += (U - 128) * (-0.391762)
+                    dst = (__m256i *)rgb->GH;
+                    src_y = (__m256i *)yuv->YH;
+                    src_u = (__m256i *)tmp_u;
+                    src_v = (__m256i *)tmp_v;
+                    for (int i = 0; i < (height * width) / 16; ++i)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_y);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_16);  // (Y - 16)
+                            tmp = _mm256_mulhi_epi16(tmp_data, Y_G);     // G = (Y - 16) * 0.164383
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_data);  // G += Y - 16
 
-                //             tmp_data = _mm256_subs_epi16(*src_v, OFFSET_128);  // (V - 128)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, V_G);  // (V - 128) * (-0.312968)
-                //             *dst = _mm256_adds_epi16(*dst, tmp);  // G += (V - 128) * (-0.312968)
-                //             tmp = _mm256_srai_epi16(tmp_data, 1);
-                //             *dst = _mm256_subs_epi16(*dst, tmp);  // G -= (V - 128) >> 1;
+                            tmp_store = _mm256_loadu_si256(src_u);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_128);  // (U - 128)
+                            tmp = _mm256_mulhi_epi16(tmp_data, U_G);  // (U - 128) * (-0.391762)
+                            tmp_dst =
+                                _mm256_adds_epi16(tmp_dst, tmp);  // G += (U - 128) * (-0.391762)
 
-                //             dst++;
-                //             src_y++;
-                //             src_u++;
-                //             src_v++;
-                //         }
+                            tmp_store = _mm256_loadu_si256(src_v);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_128);  // (V - 128)
+                            tmp = _mm256_mulhi_epi16(tmp_data, V_G);  // (V - 128) * (-0.312968)
+                            tmp_dst =
+                                _mm256_adds_epi16(tmp_dst, tmp);  // G += (V - 128) * (-0.312968)
+                            tmp = _mm256_srai_epi16(tmp_data, 1);
+                            tmp_dst = _mm256_subs_epi16(tmp_dst, tmp);  // G -= (V - 128) >> 1;
+                            _mm256_storeu_si256(dst, tmp_dst);
 
-                //     dst = (__m256i *)rgb->BH;
-                //     src_y = (__m256i *)yuv->YH;
-                //     src_u = (__m256i *)tmp_u;
-                //     src_v = (__m256i *)tmp_v;
-                //     for (int i = 0; i < (height * width) / 16; ++i)
-                //         {
-                //             tmp_data = _mm256_subs_epi16(*src_y, OFFSET_16);  // (Y - 16)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, Y_B);  // B = (Y - 16) * 0.164383
-                //             *dst = _mm256_adds_epi16(tmp, tmp_data);  // B += Y - 16
+                            dst++;
+                            src_y++;
+                            src_u++;
+                            src_v++;
+                        }
 
-                //             tmp_data = _mm256_subs_epi16(*src_v, OFFSET_128);  // (V - 128)
-                //             tmp = _mm256_mulhi_epi16(tmp_data, V_B);  // (V - 128) * 0.096027
-                //             *dst = _mm256_adds_epi16(*dst, tmp);      // B += (V - 128) *
-                //             0.096027 tmp = _mm256_srai_epi16(tmp_data, 1); *dst =
-                //             _mm256_adds_epi16(*dst, tmp);  // G += (V - 128) >> 1; tmp =
-                //             _mm256_slli_epi16(tmp_data, 1); *dst = _mm256_adds_epi16(*dst, tmp);
-                //             // G += (V - 128) << 1;
+                    dst = (__m256i *)rgb->BH;
+                    src_y = (__m256i *)yuv->YH;
+                    src_u = (__m256i *)tmp_u;
+                    src_v = (__m256i *)tmp_v;
+                    for (int i = 0; i < (height * width) / 16; ++i)
+                        {
 
-                //             dst++;
-                //             src_y++;
-                //             src_u++;
-                //             src_v++;
-                //         }
-                //     _mm_empty();
+                            tmp_store = _mm256_loadu_si256(src_y);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_16);  // (Y - 16)
+                            tmp = _mm256_mulhi_epi16(tmp_data, Y_B);     // B = (Y - 16) * 0.164383
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_data);  // B += Y - 16
 
-                // rgb->desaturation();
-                // }
+                            tmp_store = _mm256_loadu_si256(src_v);
+                            tmp_data = _mm256_subs_epi16(tmp_store, OFFSET_128);  // (V - 128)
+                            tmp = _mm256_mulhi_epi16(tmp_data, V_B);  // (V - 128) * 0.096027
+
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, tmp);  // B += (V - 128) * 0.096027
+                            tmp = _mm256_srai_epi16(tmp_data, 1);
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, tmp);  // G += (V - 128) >> 1;
+                            tmp = _mm256_slli_epi16(tmp_data, 1);
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, tmp);  // G += (V - 128) << 1;
+                            _mm256_storeu_si256(dst, tmp_dst);
+
+                            dst++;
+                            src_y++;
+                            src_u++;
+                            src_v++;
+                        }
+                    _mm_empty();
+
+                    rgb->desaturation();
+                }
                 break;
             default:
                 break;
@@ -737,135 +737,136 @@ void RGB2YUV(RGB *rgb, YUV420 *yuv)
                 }
                 break;
             case MODE_AVX:
-                // {
-                //     __m256i tmp;
+                {
+                    __m256i tmp, tmp_store, tmp_dst;
 
-                //     _mm_empty();
+                    _mm_empty();
 
-                //     const __m256i OFFSET_128 =
-                //         _mm256_set_epi16(128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-                //         128,
-                //                          128, 128, 128, 128);
-                //     const __m256i OFFSET_16 = _mm256_set_epi16(16, 16, 16, 16, 16, 16, 16, 16,
-                //     16,
-                //                                                16, 16, 16, 16, 16, 16, 16);
-                //     const __m256i R_Y =
-                //         _mm256_set_epi16(RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0],
-                //         RGB_Y[0],
-                //                          RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0],
-                //                          RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0]);
-                //     const __m256i G_Y =
-                //         _mm256_set_epi16(RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1],
-                //         RGB_Y[1],
-                //                          RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1],
-                //                          RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1]);
-                //     const __m256i B_Y =
-                //         _mm256_set_epi16(RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2],
-                //         RGB_Y[2],
-                //                          RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2],
-                //                          RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2]);
-                //     const __m256i R_U =
-                //         _mm256_set_epi16(RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0],
-                //         RGB_U[0],
-                //                          RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0],
-                //                          RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0]);
-                //     const __m256i G_U =
-                //         _mm256_set_epi16(RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1],
-                //         RGB_U[1],
-                //                          RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1],
-                //                          RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1]);
-                //     const __m256i B_U =
-                //         _mm256_set_epi16(RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2],
-                //         RGB_U[2],
-                //                          RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2],
-                //                          RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2]);
-                //     const __m256i R_V =
-                //         _mm256_set_epi16(RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0],
-                //         RGB_V[0],
-                //                          RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0],
-                //                          RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0]);
-                //     const __m256i G_V =
-                //         _mm256_set_epi16(RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1],
-                //         RGB_V[1],
-                //                          RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1],
-                //                          RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1]);
-                //     const __m256i B_V =
-                //         _mm256_set_epi16(RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2],
-                //         RGB_V[2],
-                //                          RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2],
-                //                          RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2]);
+                    const __m256i OFFSET_128 =
+                        _mm256_set_epi16(128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+                                         128, 128, 128, 128);
+                    const __m256i OFFSET_16 = _mm256_set_epi16(16, 16, 16, 16, 16, 16, 16, 16, 16,
+                                                               16, 16, 16, 16, 16, 16, 16);
+                    const __m256i R_Y =
+                        _mm256_set_epi16(RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0],
+                                         RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0],
+                                         RGB_Y[0], RGB_Y[0], RGB_Y[0], RGB_Y[0]);
+                    const __m256i G_Y =
+                        _mm256_set_epi16(RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1],
+                                         RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1],
+                                         RGB_Y[1], RGB_Y[1], RGB_Y[1], RGB_Y[1]);
+                    const __m256i B_Y =
+                        _mm256_set_epi16(RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2],
+                                         RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2],
+                                         RGB_Y[2], RGB_Y[2], RGB_Y[2], RGB_Y[2]);
+                    const __m256i R_U =
+                        _mm256_set_epi16(RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0],
+                                         RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0],
+                                         RGB_U[0], RGB_U[0], RGB_U[0], RGB_U[0]);
+                    const __m256i G_U =
+                        _mm256_set_epi16(RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1],
+                                         RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1],
+                                         RGB_U[1], RGB_U[1], RGB_U[1], RGB_U[1]);
+                    const __m256i B_U =
+                        _mm256_set_epi16(RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2],
+                                         RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2],
+                                         RGB_U[2], RGB_U[2], RGB_U[2], RGB_U[2]);
+                    const __m256i R_V =
+                        _mm256_set_epi16(RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0],
+                                         RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0],
+                                         RGB_V[0], RGB_V[0], RGB_V[0], RGB_V[0]);
+                    const __m256i G_V =
+                        _mm256_set_epi16(RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1],
+                                         RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1],
+                                         RGB_V[1], RGB_V[1], RGB_V[1], RGB_V[1]);
+                    const __m256i B_V =
+                        _mm256_set_epi16(RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2],
+                                         RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2],
+                                         RGB_V[2], RGB_V[2], RGB_V[2], RGB_V[2]);
 
-                //     __m256i *dst = (__m256i *)yuv->YH;
-                //     __m256i *src_r = (__m256i *)rgb->RH;
-                //     __m256i *src_g = (__m256i *)rgb->GH;
-                //     __m256i *src_b = (__m256i *)rgb->BH;
-                //     for (int i = 0; i < (width * height) / 16; i++)
-                //         {
-                //             *dst = _mm256_mulhi_epi16(*src_r, R_Y);  // Y = R * 0.256788
+                    __m256i *dst = (__m256i *)yuv->YH;
+                    __m256i *src_r = (__m256i *)rgb->RH;
+                    __m256i *src_g = (__m256i *)rgb->GH;
+                    __m256i *src_b = (__m256i *)rgb->BH;
+                    for (int i = 0; i < (width * height) / 16; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_r);
+                            tmp_dst = _mm256_mulhi_epi16(tmp_store, R_Y);  // Y = R * 0.256788
 
-                //             tmp = _mm256_mulhi_epi16(*src_g, G_Y);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // Y += G * 0.004129
-                //             tmp = _mm256_srli_epi16(*src_g, 1);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // Y += G >> 1;
+                            tmp_store = _mm256_loadu_si256(src_g);
+                            tmp = _mm256_mulhi_epi16(tmp_store, G_Y);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // Y += G * 0.004129
+                            tmp = _mm256_srli_epi16(tmp_store, 1);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // Y += G >> 1;
 
-                //             tmp = _mm256_mulhi_epi16(*src_b, B_Y);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // Y += B * 0.097906
+                            tmp_store = _mm256_loadu_si256(src_g);
+                            tmp = _mm256_mulhi_epi16(tmp_store, B_Y);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // Y += B * 0.097906
 
-                //             *dst = _mm256_adds_epi16(*dst, OFFSET_16);  // Y += 16
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, OFFSET_16);  // Y += 16
+                            _mm256_storeu_si256(dst, tmp_dst);
 
-                //             dst++;
-                //             src_r++;
-                //             src_g++;
-                //             src_b++;
-                //         }
+                            dst++;
+                            src_r++;
+                            src_g++;
+                            src_b++;
+                        }
 
-                //     dst = (__m256i *)yuv->UH;
-                //     src_r = (__m256i *)tmp_r;
-                //     src_g = (__m256i *)tmp_g;
-                //     src_b = (__m256i *)tmp_b;
-                //     for (int i = 0; i < (width * height) / 64; i++)
-                //         {
-                //             *dst = _mm256_mulhi_epi16(*src_r, R_U);  // U = R * 0.439216
+                    dst = (__m256i *)yuv->UH;
+                    src_r = (__m256i *)tmp_r;
+                    src_g = (__m256i *)tmp_g;
+                    src_b = (__m256i *)tmp_b;
+                    for (int i = 0; i < (width * height) / 64; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_r);
+                            tmp_dst = _mm256_mulhi_epi16(tmp_store, R_U);  // U = R * 0.439216
 
-                //             tmp = _mm256_mulhi_epi16(*src_g, G_U);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // U += G * (-0.367788)
+                            tmp_store = _mm256_loadu_si256(src_g);
+                            tmp = _mm256_mulhi_epi16(tmp_store, G_U);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // U += G * (-0.367788)
 
-                //             tmp = _mm256_mulhi_epi16(*src_b, B_U);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // U += B * (-0.071427)
+                            tmp_store = _mm256_loadu_si256(src_b);
+                            tmp = _mm256_mulhi_epi16(tmp_store, B_U);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // U += B * (-0.071427)
 
-                //             *dst = _mm256_adds_epi16(*dst, OFFSET_128);  // U += 128
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, OFFSET_128);  // U += 128
+                            _mm256_storeu_si256(dst, tmp_dst);
 
-                //             dst++;
-                //             src_r++;
-                //             src_g++;
-                //             src_b++;
-                //         }
+                            dst++;
+                            src_r++;
+                            src_g++;
+                            src_b++;
+                        }
 
-                //     dst = (__m256i *)yuv->VH;
-                //     src_r = (__m256i *)tmp_r;
-                //     src_g = (__m256i *)tmp_g;
-                //     src_b = (__m256i *)tmp_b;
-                //     for (int i = 0; i < (width * height) / 64; i++)
-                //         {
-                //             *dst = _mm256_mulhi_epi16(*src_r, R_V);  // V = R * (-0.148223)
+                    dst = (__m256i *)yuv->VH;
+                    src_r = (__m256i *)tmp_r;
+                    src_g = (__m256i *)tmp_g;
+                    src_b = (__m256i *)tmp_b;
+                    for (int i = 0; i < (width * height) / 64; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_r);
+                            tmp_dst = _mm256_mulhi_epi16(tmp_store, R_V);  // V = R * (-0.148223)
 
-                //             tmp = _mm256_mulhi_epi16(*src_g, G_V);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // V += G * (-0.290993)
+                            tmp_store = _mm256_loadu_si256(src_g);
+                            tmp = _mm256_mulhi_epi16(tmp_store, G_V);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // V += G * (-0.290993)
 
-                //             tmp = _mm256_mulhi_epi16(*src_b, B_V);
-                //             *dst = _mm256_adds_epi16(tmp, *dst);  // V += B * (0.439216)
+                            tmp_store = _mm256_loadu_si256(src_b);
+                            tmp = _mm256_mulhi_epi16(tmp_store, B_V);
+                            tmp_dst = _mm256_adds_epi16(tmp, tmp_dst);  // V += B * (0.439216)
 
-                //             *dst = _mm256_adds_epi16(*dst, OFFSET_128);  // V += 128
+                            tmp_dst = _mm256_adds_epi16(tmp_dst, OFFSET_128);  // V += 128
+                            _mm256_storeu_si256(dst, tmp_dst);
 
-                //             dst++;
-                //             src_r++;
-                //             src_g++;
-                //             src_b++;
-                //         }
-                //     _mm_empty();
+                            dst++;
+                            src_r++;
+                            src_g++;
+                            src_b++;
+                        }
+                    _mm_empty();
 
-                //     yuv->shword_to_byte();
-                // }
+                    yuv->shword_to_byte();
+                }
             default:
                 break;
         }
@@ -980,49 +981,51 @@ void ALPHA_AMALGAMATE(RGB *src, RGB *dst, int _alpha)
                 }
                 break;
             case MODE_AVX:
-                // {
-                //     _mm_empty();
-                //     __m256i alpha = _mm256_set_epi16(_alpha, _alpha, _alpha, _alpha, _alpha,
-                //     _alpha,
-                //                                      _alpha, _alpha, _alpha, _alpha, _alpha,
-                //                                      _alpha, _alpha, _alpha, _alpha, _alpha);
-                //     __m256i tmp;
+                {
+                    _mm_empty();
+                    __m256i alpha = _mm256_set_epi16(_alpha, _alpha, _alpha, _alpha, _alpha, _alpha,
+                                                     _alpha, _alpha, _alpha, _alpha, _alpha, _alpha,
+                                                     _alpha, _alpha, _alpha, _alpha);
+                    __m256i tmp, tmp_store;
 
-                //     __m256i *dst_ = (__m256i *)dst->RH;
-                //     __m256i *src_ = (__m256i *)src->RH;
-                //     for (int i = 0; i < size / 16; i++)
-                //         {
-                //             tmp = _mm256_mullo_epi16(*src_, alpha);
-                //             tmp = _mm256_srli_epi16(tmp, 8);
-                //             *dst_ = tmp;
-                //             dst_++;
-                //             src_++;
-                //         }
+                    __m256i *dst_ = (__m256i *)dst->RH;
+                    __m256i *src_ = (__m256i *)src->RH;
+                    for (int i = 0; i < size / 16; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_);
+                            tmp = _mm256_mullo_epi16(tmp_store, alpha);
+                            tmp = _mm256_srli_epi16(tmp, 8);
+                            _mm256_storeu_si256(dst_, tmp);
+                            dst_++;
+                            src_++;
+                        }
 
-                //     dst_ = (__m256i *)dst->GH;
-                //     src_ = (__m256i *)src->GH;
-                //     for (int i = 0; i < size / 16; i++)
-                //         {
-                //             tmp = _mm256_mullo_epi16(*src_, alpha);
-                //             tmp = _mm256_srli_epi16(tmp, 8);
-                //             *dst_ = tmp;
-                //             dst_++;
-                //             src_++;
-                //         }
+                    dst_ = (__m256i *)dst->GH;
+                    src_ = (__m256i *)src->GH;
+                    for (int i = 0; i < size / 16; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_);
+                            tmp = _mm256_mullo_epi16(tmp_store, alpha);
+                            tmp = _mm256_srli_epi16(tmp, 8);
+                            _mm256_storeu_si256(dst_, tmp);
+                            dst_++;
+                            src_++;
+                        }
 
-                //     dst_ = (__m256i *)dst->BH;
-                //     src_ = (__m256i *)src->BH;
-                //     for (int i = 0; i < size / 16; i++)
-                //         {
-                //             tmp = _mm256_mullo_epi16(*src_, alpha);
-                //             tmp = _mm256_srli_epi16(tmp, 8);
-                //             *dst_ = tmp;
-                //             dst_++;
-                //             src_++;
-                //         }
+                    dst_ = (__m256i *)dst->BH;
+                    src_ = (__m256i *)src->BH;
+                    for (int i = 0; i < size / 16; i++)
+                        {
+                            tmp_store = _mm256_loadu_si256(src_);
+                            tmp = _mm256_mullo_epi16(tmp_store, alpha);
+                            tmp = _mm256_srli_epi16(tmp, 8);
+                            _mm256_storeu_si256(dst_, tmp);
+                            dst_++;
+                            src_++;
+                        }
 
-                //     _mm_empty();
-                // }
+                    _mm_empty();
+                }
                 break;
             default:
                 break;
@@ -1111,7 +1114,7 @@ void mix(YUV420 *yuv_src1, YUV420 *yuv_src2)
 
 int main()
 {
-    mode = MODE_MMX;
+    mode = MODE_AVX;
     // int size = 1920 * 1080;
     int fsize = 1920 * 1080 * 3 / 2;
     BYTE *block_1 = new BYTE[fsize], *block_2 = new BYTE[fsize], *block_h = new BYTE[fsize];
@@ -1137,20 +1140,8 @@ int main()
     yuv_2->load_from_block(block_2);
 
 
-    // show_all_alpha(yuv_1);
-    // mix(yuv_1, yuv_2);
-
-    RGB *rgb_h = new RGB(1080, 1920);
-    YUV2RGB(yuv_2, rgb_h);
-    RGB2YUV(rgb_h, yuv_h);
-    yuv_h->save_block(block_h);
-    FILE *fyuv_dst = fopen("result/result1.yuv", "wb+");
-    if (fyuv_dst == NULL)
-        {
-            printf("Open file faild.\n");
-        }
-    fwrite(block_h, 1, fsize, fyuv_dst);
-    fclose(fyuv_dst);
+    show_all_alpha(yuv_1);
+    mix(yuv_1, yuv_2);
 
     return 0;
 }
